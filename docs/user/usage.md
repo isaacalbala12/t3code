@@ -47,6 +47,14 @@ results appear as each one responds.
 If recent work is missing or a new model shows no cost, refresh to rescan session history and
 update model pricing.
 
+## Watch your allowance in the composer
+
+The composer footer shows the selected provider's session and long-window usage, for example
+`5h 12%  Mo 47%`, so you can see how much of your subscription is used without leaving the thread.
+It uses the monthly window when the provider reports one and the weekly window otherwise, and turns
+amber at 75% and red at 90%. Hover it for the exact figures and reset countdowns. Providers that do
+not report windows, such as API-key accounts, show nothing.
+
 ## Set custom model prices
 
 On web or desktop, open the environment dropdown on **Usage**, then choose **Model prices** to add,

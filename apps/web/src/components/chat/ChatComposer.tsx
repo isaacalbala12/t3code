@@ -243,6 +243,7 @@ import {
 } from "~/state/pullRequests";
 import { useEnvironmentQuery } from "~/state/query";
 import { useDebouncedValue } from "~/state/queries";
+import { ComposerUsageChip } from "./ComposerUsageChip";
 import { ProviderModelPicker } from "./ProviderModelPicker";
 import { resolveModelPickerSelectedModel } from "./ModelPickerContent";
 import { type ComposerCommandItem, ComposerCommandMenu } from "./ComposerCommandMenu";
@@ -6975,6 +6976,9 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   }
                   className="flex shrink-0 flex-nowrap items-center justify-end gap-2"
                 >
+                  {isComposerResting ? null : (
+                    <ComposerUsageChip limits={selectedProviderStatus?.usageLimits} />
+                  )}
                   {showComposerAttachAction ? (
                     <>
                       <input
