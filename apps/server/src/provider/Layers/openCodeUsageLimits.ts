@@ -27,6 +27,51 @@ const UsageResponse = Schema.Struct({
   usage: Schema.Struct({ rolling: UsageWindow, weekly: UsageWindow, monthly: UsageWindow }),
 });
 
+/** Reads the Go subscription's rolling, weekly and monthly allowance for one API key. */
+export const fetchOpenCodeGoUsageLimits = Effect.fn("fetchOpenCodeGoUsageLimits")(function* (
+  apiKey: string,
+  checkedAt: string,
+) {
+  const unsupported = makeUnavailableUsageLimits({ checkedAt, reason: "unsupported" });
+  const client = yield* HttpClient.HttpClient;
+  const response = yield* client.execute(
+    HttpClientRequest.get("https://opencode.ai/zen/go/v1/usage").pipe(
+      HttpClientRequest.bearerToken(apiKey),
+    ),
+  );
+  // A valid Zen key can exist without a Go subscription.
+  if (response.status === 403) return unsupported;
+  const body = yield* HttpClientResponse.filterStatusOk(response).pipe(
+    Effect.flatMap(HttpClientResponse.schemaBodyJson(UsageResponse)),
+  );
+  const windows: ServerProviderUsageWindow[] = [
+    {
+      id: "go_rolling",
+      kind: "session",
+      label: "Go · Session",
+      windowDurationMins: 5 * 60,
+      usedPercent: clampPercent(body.usage.rolling.percent),
+      resetsAt: DateTime.formatIso(body.usage.rolling.resetsAt),
+    },
+    {
+      id: "go_weekly",
+      kind: "weekly",
+      label: "Go · Weekly",
+      windowDurationMins: 7 * 24 * 60,
+      usedPercent: clampPercent(body.usage.weekly.percent),
+      resetsAt: DateTime.formatIso(body.usage.weekly.resetsAt),
+    },
+    {
+      id: "go_monthly",
+      kind: "monthly",
+      label: "Go · Monthly",
+      usedPercent: clampPercent(body.usage.monthly.percent),
+      resetsAt: DateTime.formatIso(body.usage.monthly.resetsAt),
+    },
+  ];
+  return makeUsageLimits({ checkedAt, windows });
+});
+
 /** External OpenCode servers own their credentials; never read the host's account for them. */
 export const readOpenCodeGoUsageLimits = Effect.fn("readOpenCodeGoUsageLimits")(function* (input: {
   readonly enabled: boolean;
@@ -59,43 +104,7 @@ export const readOpenCodeGoUsageLimits = Effect.fn("readOpenCodeGoUsageLimits")(
     const apiKey = (Option.isSome(apiAuth) ? apiAuth.value.key : env.OPENCODE_API_KEY)?.trim();
     if (!apiKey) return unsupported;
 
-    const client = yield* HttpClient.HttpClient;
-    const response = yield* client.execute(
-      HttpClientRequest.get("https://opencode.ai/zen/go/v1/usage").pipe(
-        HttpClientRequest.bearerToken(apiKey),
-      ),
-    );
-    // A valid Zen key can exist without a Go subscription.
-    if (response.status === 403) return unsupported;
-    const body = yield* HttpClientResponse.filterStatusOk(response).pipe(
-      Effect.flatMap(HttpClientResponse.schemaBodyJson(UsageResponse)),
-    );
-    const windows: ServerProviderUsageWindow[] = [
-      {
-        id: "go_rolling",
-        kind: "session",
-        label: "Go · Session",
-        windowDurationMins: 5 * 60,
-        usedPercent: clampPercent(body.usage.rolling.percent),
-        resetsAt: DateTime.formatIso(body.usage.rolling.resetsAt),
-      },
-      {
-        id: "go_weekly",
-        kind: "weekly",
-        label: "Go · Weekly",
-        windowDurationMins: 7 * 24 * 60,
-        usedPercent: clampPercent(body.usage.weekly.percent),
-        resetsAt: DateTime.formatIso(body.usage.weekly.resetsAt),
-      },
-      {
-        id: "go_monthly",
-        kind: "monthly",
-        label: "Go · Monthly",
-        usedPercent: clampPercent(body.usage.monthly.percent),
-        resetsAt: DateTime.formatIso(body.usage.monthly.resetsAt),
-      },
-    ];
-    return makeUsageLimits({ checkedAt, windows });
+    return yield* fetchOpenCodeGoUsageLimits(apiKey, checkedAt);
   }).pipe(
     Effect.timeout("5 seconds"),
     Effect.orElseSucceed(() =>

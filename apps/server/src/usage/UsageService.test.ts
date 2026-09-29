@@ -4,6 +4,7 @@ import * as NodeFSP from "node:fs/promises";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import * as NodeSqlite from "node:sqlite";
+import * as NodeZlib from "node:zlib";
 
 import { assert, describe, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -109,6 +110,7 @@ const serviceLayers = (input: {
         GROK_HOME: NodePath.join(input.home, "grok"),
         OPENCODE_DATA_DIR: NodePath.join(input.home, "opencode"),
         ANTIGRAVITY_DATA_DIR: NodePath.join(input.home, "antigravity"),
+        DSH_HOME: NodePath.join(input.home, "dsh"),
         XDG_CONFIG_HOME: NodePath.join(input.home, "config"),
         APPDATA: NodePath.join(input.home, "config"),
         ...input.environment,
@@ -287,6 +289,51 @@ describe("UsageService", () => {
       }).pipe(Effect.scoped),
   );
 
+  it.live("includes DeepSeek Harness session history under DSH_HOME", () =>
+    Effect.gen(function* () {
+      const { settings, home } = yield* setup;
+      const sessionDir = NodePath.join(home, "dsh", "sessions", "--workspace--", "session-1");
+      const line = yield* encodeUnknownJson({
+        type: "assistant/message",
+        seq: 3,
+        time: Date.parse("2026-08-01T10:00:00Z"),
+        data: {
+          message: { id: "m1", source: { provider: "opencode-go", model: "deepseek-v4-flash" } },
+          usage: { inputTokens: 30, outputTokens: 12, cacheReadTokens: 50 },
+        },
+      });
+      yield* Effect.promise(async () => {
+        await NodeFSP.mkdir(sessionDir, { recursive: true });
+        // dsh appends one zstd frame per write.
+        await NodeFSP.writeFile(
+          NodePath.join(sessionDir, "session.v4.jsonl.zstd"),
+          Buffer.concat([
+            NodeZlib.zstdCompressSync(Buffer.from('{"type":"session"}\n')),
+            NodeZlib.zstdCompressSync(Buffer.from(`${line}\n`)),
+          ]),
+        );
+      });
+      const service = yield* UsageService.make.pipe(
+        Effect.provide(serviceLayers({ prefix: "usage-service-deepseek", home, settings })),
+      );
+      const summary = yield* service.readSummary(WINDOW);
+      const bucket = summary.buckets.find((entry) => entry.provider === "deepseek");
+      assert.strictEqual(bucket?.model, "deepseek-v4-flash");
+      assert.deepStrictEqual(bucket?.totals, {
+        uncachedInputTokens: 30,
+        cachedInputTokens: 50,
+        cacheCreationTokens: 0,
+        outputTokens: 12,
+        reasoningTokens: 0,
+      });
+      assert.strictEqual(
+        summary.sources.find((source) => source.fingerprint.provider === "deepseek")
+          ?.distinctSessions,
+        1,
+      );
+    }).pipe(Effect.scoped),
+  );
+
   it.live("counts aliased OpenCode and Antigravity directories once", () =>
     Effect.gen(function* () {
       const { settings, home } = yield* setup;
@@ -321,6 +368,7 @@ describe("UsageService", () => {
             environment: {
               OPENCODE_DATA_DIR: `${opencode},${opencodeAlias}`,
               ANTIGRAVITY_DATA_DIR: `${antigravityA},${antigravityB}`,
+              DSH_HOME: NodePath.join(home, "dsh"),
             },
           }),
         ),

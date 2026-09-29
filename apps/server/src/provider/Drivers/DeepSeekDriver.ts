@@ -30,6 +30,7 @@ import {
   makeDeepSeekModelDiscovery,
 } from "../Layers/DeepSeekProvider.ts";
 import { ProviderEventLoggers } from "../Layers/ProviderEventLoggers.ts";
+import { readDeepSeekUsageLimits } from "../Layers/deepSeekUsageLimits.ts";
 import { makeManagedServerProvider } from "../makeManagedServerProvider.ts";
 import {
   defaultProviderContinuationIdentity,
@@ -130,9 +131,18 @@ export const DeepSeekDriver: ProviderDriver<DeepSeekSettings, DeepSeekDriverEnv>
         processEnv,
         modelDiscovery.discover,
       ).pipe(
+        Effect.flatMap((snapshot) =>
+          // Allowance comes from OpenCode Go, which dsh reaches through its opencode-go provider.
+          readDeepSeekUsageLimits({ settings: effectiveConfig, environment: processEnv }).pipe(
+            Effect.map((usageLimits) => ({ ...snapshot, usageLimits })),
+          ),
+        ),
         Effect.map(stampIdentity),
         Effect.provideService(Crypto.Crypto, crypto),
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+        Effect.provideService(HttpClient.HttpClient, httpClient),
+        Effect.provideService(FileSystem.FileSystem, fileSystem),
+        Effect.provideService(Path.Path, path),
       );
 
       const snapshotSettings = makeProviderSnapshotSettingsSource(effectiveConfig, serverSettings);

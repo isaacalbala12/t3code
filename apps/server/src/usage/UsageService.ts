@@ -17,6 +17,7 @@ import * as NodeOS from "node:os";
 import {
   ClaudeSettings,
   CodexSettings,
+  DeepSeekSettings,
   type ProviderInstanceConfig,
   USAGE_CONTRACT_VERSION,
   ProviderInstanceId,
@@ -50,6 +51,7 @@ import * as ServerSettings from "../serverSettings.ts";
 import { resolveCodexHomeLayout } from "../provider/Drivers/CodexHomeLayout.ts";
 import { resolveAntigravityInstanceDirectories } from "../provider/antigravityAuthSupport.ts";
 import { mergeProviderInstanceEnvironment } from "../provider/ProviderInstanceEnvironment.ts";
+import { readDeepSeekUsage } from "./deepSeekUsageReader.ts";
 import { readOpenCodeUsage } from "./opencodeUsageReader.ts";
 import { readAntigravityUsage } from "./antigravityUsageReader.ts";
 import { readCursorAccountUsage } from "./cursorUsageReader.ts";
@@ -89,6 +91,7 @@ const MAX_HOURLY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const CACHE_RETENTION_DAYS = 90;
 
 const decodeCodexSettings = Schema.decodeOption(CodexSettings);
+const decodeDeepSeekSettings = Schema.decodeOption(DeepSeekSettings);
 const decodeClaudeSettings = Schema.decodeOption(ClaudeSettings);
 
 /** On-disk shape of the rate snapshot. */
@@ -580,6 +583,33 @@ export const make = Effect.gen(function* () {
         files: !exists && !failed ? null : antigravity.files.filter((file) => file.root === dir),
         status: failed ? "partial" : "ok",
         ...(failed ? { message: "Some Antigravity history could not be read." } : {}),
+      });
+    }
+    // dsh keeps one zstd session log per session under `$DSH_HOME/sessions`. Sessions run through
+    // T3 and through `dsh web` or the CLI share it, so both count once per directory.
+    const deepSeekRoots = yield* envRoots("DSH_HOME", [path.join(home, ".dsh")]);
+    for (const instance of Object.values(settings.providerInstances)) {
+      if (instance.driver !== "deepseek") continue;
+      const decoded = decodeDeepSeekSettings(instance.config ?? {});
+      if (Option.isNone(decoded)) continue;
+      const environment = mergeProviderInstanceEnvironment(instance.environment, hostEnvironment);
+      const configured = decoded.value.homePath.trim() || environment.DSH_HOME?.trim();
+      if (configured) deepSeekRoots.push(path.resolve(expandHomePath(configured)));
+    }
+    const deepSeekDirs = new Set<string>();
+    for (const root of deepSeekRoots) {
+      const dir = path.join(root, "sessions");
+      deepSeekDirs.add(yield* fileSystem.realPath(dir).pipe(Effect.orElseSucceed(() => dir)));
+    }
+    for (const dir of deepSeekDirs) {
+      const result = yield* Effect.promise(() => readDeepSeekUsage(dir, windowStartMs));
+      scanned.push({
+        provider: "deepseek",
+        dir,
+        volumeId: yield* Effect.promise(() => readDirectoryVolumeId(dir)),
+        files: result.missing && !result.error ? null : result.files,
+        status: result.error ? "partial" : "ok",
+        ...(result.error ? { message: "Some DeepSeek Harness history could not be read." } : {}),
       });
     }
     const cursorUserHome =

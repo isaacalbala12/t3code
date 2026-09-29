@@ -9,10 +9,13 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 import * as Ref from "effect/Ref";
+import { FetchHttpClient } from "effect/unstable/http";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { describe, expect } from "vite-plus/test";
 
+import { readDeepSeekUsageLimits } from "../Layers/deepSeekUsageLimits.ts";
 import {
   checkDeepSeekProviderStatus,
   discoverDeepSeekModelsViaAcp,
@@ -67,6 +70,14 @@ describe.runIf(process.env.T3_DEEPSEEK_ACP_PROBE === "1")("DeepSeek ACP CLI prob
         snapshot.models.some((model) => model.slug === "deepseek-official/deepseek-v4-pro"),
       ).toBe(true);
     }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("reads the OpenCode Go allowance dsh's key is entitled to", () =>
+    Effect.gen(function* () {
+      const limits = yield* readDeepSeekUsageLimits({ settings, environment: process.env });
+      expect(limits.unavailable).toBeUndefined();
+      expect(limits.windows.map((window) => window.kind)).toEqual(["session", "weekly", "monthly"]);
+    }).pipe(Effect.provide(Layer.merge(NodeServices.layer, FetchHttpClient.layer))),
   );
 
   it.effect("applies a model and reasoning effort through session/set_config_option", () =>

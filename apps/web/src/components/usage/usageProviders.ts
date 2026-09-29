@@ -4,6 +4,7 @@ import {
   AntigravityIcon,
   ClaudeAI,
   CursorIcon,
+  DeepSeekIcon,
   GrokIcon,
   type Icon,
   OpenAI,
@@ -41,6 +42,7 @@ export const PROVIDER_PRESENTATION = {
   cursor: { label: "Cursor", color: "#8b8b8b", mark: CursorIcon },
   opencode: { label: "OpenCode", color: "#5b9bbd", mark: OpenCodeIcon },
   antigravity: { label: "Antigravity", color: "#8c7bd1", mark: AntigravityIcon },
+  deepseek: { label: "DeepSeek Harness", color: "#4d6bfe", mark: DeepSeekIcon },
 } satisfies Record<UsageProviderKind, UsageProviderPresentation>;
 
 /** Stable provider reading order across charts, summaries, tables, and hover rows. */

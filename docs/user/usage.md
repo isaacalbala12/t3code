@@ -6,12 +6,18 @@ desktop when the terminal is not focused. Customize `usage.open` in
 
 ## Understand your usage
 
-**Usage** combines Codex, Claude Code, Grok Build, OpenCode, Antigravity, and Cursor history from your connected
+**Usage** combines Codex, Claude Code, Grok Build, OpenCode, Antigravity, DeepSeek Harness, and Cursor history from your connected
 environments. It shows token use, cache savings, model breakdowns, and estimated API-equivalent
 cost. These estimates are not your subscription bill.
 
 Totals depend on the history available on each server. Grok turns without a saved completed-turn
 record are missing from the totals.
+
+DeepSeek Harness reads the session logs `dsh` keeps under `$DSH_HOME/sessions` (`~/.dsh` by default),
+including sessions run from `dsh web` or the CLI. Costs are estimated from the model name, so models
+without public pricing show tokens only until you set a custom price. When `dsh` reaches models through
+OpenCode Go, Usage also shows your Go session, weekly, and monthly allowance, read with the key `dsh`
+already stores.
 
 OpenCode reads its SQLite database and older JSON history. Antigravity reads local conversation
 databases, including T3-managed profiles. Set `OPENCODE_DATA_DIR` or `ANTIGRAVITY_DATA_DIR` on the
