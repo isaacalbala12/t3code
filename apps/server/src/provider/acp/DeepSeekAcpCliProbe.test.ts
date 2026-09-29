@@ -28,6 +28,9 @@ const settings = {
   customModels: [],
 } as const;
 
+// Point at any model the profile offers, e.g. opencode-go/deepseek-v4-flash.
+const LIVE_MODEL = process.env.T3_DEEPSEEK_MODEL ?? "deepseek-official/deepseek-v4-flash";
+
 const makeProbeRuntime = Effect.gen(function* () {
   const childProcessSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const crypto = yield* Crypto.Crypto;
@@ -96,7 +99,7 @@ describe.runIf(process.env.T3_DEEPSEEK_ACP_PROBE === "1")("DeepSeek ACP CLI prob
         yield* runtime.start();
         yield* applyDeepSeekAcpModelSelection({
           runtime,
-          model: "deepseek-official/deepseek-v4-flash",
+          model: LIVE_MODEL,
           selections: [{ id: "reasoning_effort", value: "off" }],
           mapError: ({ cause }) => cause,
         });
