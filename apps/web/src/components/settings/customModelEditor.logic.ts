@@ -89,6 +89,21 @@ export const DESCRIPTOR_PRESETS_BY_KIND: Partial<
   [ProviderDriverKind.make("grok")]: [
     { id: "reasoningEffort", label: "Reasoning", type: "select", choices: EFFORT_CHOICES },
   ],
+  // dsh's own config option id, shipped by the acp profile. Other dsh options are
+  // discovered from the live session and need no entry here.
+  [ProviderDriverKind.make("deepseek")]: [
+    {
+      id: "reasoning_effort",
+      label: "Reasoning effort",
+      type: "select",
+      choices: [
+        { id: "off", label: "Off" },
+        { id: "low", label: "Low" },
+        { id: "high", label: "High", isDefault: true },
+        { id: "max", label: "Max" },
+      ],
+    },
+  ],
   [ProviderDriverKind.make("opencode")]: [
     { id: "variant", label: "Reasoning", type: "select", choices: EFFORT_CHOICES },
     {

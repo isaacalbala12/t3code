@@ -57,6 +57,13 @@ run before the prompt. They reject profiles with such configuration before launc
 instructions and tool denial do not create a native sandbox.
 See [helper constraints](../../apps/server/src/textGeneration/AntigravityTextGeneration.ts).
 
+DeepSeek Harness (`dsh acp`) exposes its model picker and every other tunable as ACP session
+config options. The [provider](../../apps/server/src/provider/Layers/DeepSeekProvider.ts) turns each
+non-model option into a model option keyed by the option's own id, so new dsh options need no T3
+change. dsh identifies models as a JSON `[provider, model]` pair; T3 slugs are `provider/model`, and
+the [ACP support](../../apps/server/src/provider/acp/DeepSeekAcpSupport.ts) translates between them.
+A slug the running profile does not offer keeps the session's current model instead of failing the turn.
+
 ## Provider updates run only through the owning installer
 
 A one-click update is offered only when the resolved executable's path proves which installer owns

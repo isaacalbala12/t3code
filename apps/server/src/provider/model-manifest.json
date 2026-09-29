@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-29T01:03:44Z",
+  "updatedAt": "2026-09-29T12:30:00Z",
   "compatibility": [
     {
       "driver": "codex",
@@ -38,6 +38,21 @@
       "ranges": [
         { "range": ">=1.0.13", "status": "supported" },
         { "range": "<1.0.13", "status": "unknown" }
+      ]
+    },
+    {
+      "driver": "deepseek",
+      "t3CodeRange": ">=0.0.42",
+      "recommendedRange": ">=0.1.7",
+      "ranges": [
+        {
+          "range": ">=0.1.7",
+          "status": "supported"
+        },
+        {
+          "range": "<0.1.7",
+          "status": "unknown"
+        }
       ]
     },
     {
