@@ -19,7 +19,7 @@ We wanted something performant, remote-ready, and truly open. If we ever go the 
 > - Claude: install [Claude Code](https://claude.com/product/claude-code) and run `claude auth login`
 > - Cursor: install [Cursor CLI](https://cursor.com/cli) and run `agent login`
 > - Grok Build: install [Grok Build CLI](https://x.ai/cli) and run `grok login`
-> - DeepSeek Harness (fork only): `npm install -g @deepseek-ai/dsh`, then add a DeepSeek API key with `dsh web` (Settings → Models) or export `DEEPSEEK_API_KEY`
+> - DeepSeek Harness (fork only): `npm install -g @deepseek-ai/dsh`, then configure your models and keys once in `dsh web` (Settings → Models); T3 Code layers that `web` profile onto `dsh acp` automatically
 > - OpenCode: install [OpenCode](https://opencode.ai) and run `opencode auth login`
 > - Antigravity: enable it in Settings, then use **Install Antigravity** and **Sign in with Google**. No CLI is required.
 

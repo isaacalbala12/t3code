@@ -111,15 +111,15 @@ and enable the provider you want. Installation, login, and configuration belong
 to that environment's machine, even when you connect from a phone or another
 computer.
 
-| Provider         | Install and authenticate                                                                                 |
-| ---------------- | -------------------------------------------------------------------------------------------------------- |
-| Codex            | Install [Codex CLI](https://developers.openai.com/codex/cli), then run `codex login`.                    |
-| Claude           | Install [Claude Code](https://claude.com/product/claude-code), then run `claude auth login`.             |
-| Cursor           | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                                    |
-| Grok Build       | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                                       |
-| DeepSeek Harness | Install `@deepseek-ai/dsh` from npm, then store a DeepSeek API key in `dsh` (or set `DEEPSEEK_API_KEY`). |
-| OpenCode         | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                                 |
-| Antigravity      | Install and sign in with Google from T3 Code's provider settings.                                        |
+| Provider         | Install and authenticate                                                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Codex            | Install [Codex CLI](https://developers.openai.com/codex/cli), then run `codex login`.                                   |
+| Claude           | Install [Claude Code](https://claude.com/product/claude-code), then run `claude auth login`.                            |
+| Cursor           | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                                                   |
+| Grok Build       | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                                                      |
+| DeepSeek Harness | Install `@deepseek-ai/dsh` from npm, then configure models and keys in `dsh web`; T3 Code reuses that profile's config. |
+| OpenCode         | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                                                |
+| Antigravity      | Install and sign in with Google from T3 Code's provider settings.                                                       |
 
 Provider CLIs must be on the server's `PATH`. If T3 Code cannot find one, set its
 **Binary path** in provider settings, especially when using a version manager.
