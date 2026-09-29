@@ -1,9 +1,13 @@
+// @effect-diagnostics nodeBuiltinImport:off - resolving the dsh home is a Node filesystem boundary.
 import {
   DEEPSEEK_DEFAULT_MODEL,
   type DeepSeekSettings,
   type ProviderOptionSelection,
 } from "@t3tools/contracts";
 import { tokenizeCliArgs } from "@t3tools/shared/cliArgs";
+import * as NodeFS from "node:fs";
+import * as NodeOS from "node:os";
+import * as NodePath from "node:path";
 import * as Crypto from "effect/Crypto";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -22,7 +26,7 @@ const DEEPSEEK_AUTH_METHOD_ID = "none";
 
 type DeepSeekAcpRuntimeSettings = Pick<
   DeepSeekSettings,
-  "binaryPath" | "profile" | "homePath" | "launchArgs"
+  "binaryPath" | "profile" | "sharedConfigProfile" | "homePath" | "launchArgs"
 >;
 
 export interface DeepSeekAcpRuntimeInput extends Omit<
@@ -34,11 +38,37 @@ export interface DeepSeekAcpRuntimeInput extends Omit<
   readonly environment?: NodeJS.ProcessEnv;
 }
 
-/** `dsh <profile> [launch args]`. The shipped `acp` profile serves ACP over stdio. */
+function deepSeekHome(
+  settings: Pick<DeepSeekSettings, "homePath"> | null | undefined,
+  environment: NodeJS.ProcessEnv | undefined,
+): string {
+  const configured = settings?.homePath?.trim() || environment?.[DSH_HOME_ENV]?.trim();
+  return configured ? expandHomePath(configured) : NodePath.join(NodeOS.homedir(), ".dsh");
+}
+
+/**
+ * `dsh <profile> --patch <shared patch> [launch args]`. The shipped `acp` profile serves ACP
+ * over stdio but starts with no model providers, while `dsh web` writes them to its own
+ * profile. Layering that profile's patch on top makes the web configuration apply here.
+ */
 export function deepSeekAcpSpawnArgs(
-  settings: Pick<DeepSeekSettings, "profile" | "launchArgs"> | null | undefined,
+  settings:
+    | Pick<DeepSeekSettings, "profile" | "launchArgs" | "sharedConfigProfile" | "homePath">
+    | null
+    | undefined,
+  environment?: NodeJS.ProcessEnv,
 ): ReadonlyArray<string> {
-  return [settings?.profile?.trim() || DEFAULT_PROFILE, ...tokenizeCliArgs(settings?.launchArgs)];
+  const profile = settings?.profile?.trim() || DEFAULT_PROFILE;
+  const shared = settings?.sharedConfigProfile?.trim();
+  const sharedPatch =
+    shared && shared !== profile
+      ? NodePath.join(deepSeekHome(settings, environment), "profiles", shared, "cordis.patch.yml")
+      : undefined;
+  return [
+    profile,
+    ...(sharedPatch && NodeFS.existsSync(sharedPatch) ? ["--patch", sharedPatch] : []),
+    ...tokenizeCliArgs(settings?.launchArgs),
+  ];
 }
 
 export function deepSeekProcessEnvironment(
@@ -60,7 +90,7 @@ export function buildDeepSeekAcpSpawnInput(
   const env = deepSeekProcessEnvironment(settings, environment);
   return {
     command: settings?.binaryPath || "dsh",
-    args: [...deepSeekAcpSpawnArgs(settings)],
+    args: [...deepSeekAcpSpawnArgs(settings, environment)],
     cwd,
     ...(env ? { env } : {}),
   };

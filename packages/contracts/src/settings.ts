@@ -776,6 +776,15 @@ export const DeepSeekSettings = makeProviderSettingsSchema(
         providerSettingsForm: { placeholder: "acp", clearWhenEmpty: "omit" },
       }),
     ),
+    sharedConfigProfile: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("web")),
+      Schema.annotateKey({
+        title: "Shared config profile",
+        description:
+          "dsh profile whose cordis.patch.yml (models, providers, keys) is layered onto the ACP profile, so what you configure in dsh web applies here. Leave empty to disable.",
+        providerSettingsForm: { placeholder: "web", clearWhenEmpty: "omit" },
+      }),
+    ),
     homePath: TrimmedString.pipe(
       Schema.withDecodingDefault(Effect.succeed("")),
       Schema.annotateKey({
@@ -803,7 +812,7 @@ export const DeepSeekSettings = makeProviderSettingsSchema(
     ),
   },
   {
-    order: ["binaryPath", "profile", "homePath", "launchArgs"],
+    order: ["binaryPath", "profile", "sharedConfigProfile", "homePath", "launchArgs"],
   },
 );
 export type DeepSeekSettings = typeof DeepSeekSettings.Type;
@@ -1500,6 +1509,7 @@ const DeepSeekSettingsPatch = Schema.Struct({
   enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(TrimmedString),
   profile: Schema.optionalKey(TrimmedString),
+  sharedConfigProfile: Schema.optionalKey(TrimmedString),
   homePath: Schema.optionalKey(TrimmedString),
   launchArgs: Schema.optionalKey(TrimmedString),
   customModels: Schema.optionalKey(Schema.Array(CustomModelSetting)),

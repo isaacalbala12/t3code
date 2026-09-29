@@ -1,4 +1,8 @@
+// @effect-diagnostics nodeBuiltinImport:off - resolving the dsh home is a Node filesystem boundary.
 import { DEEPSEEK_DEFAULT_MODEL, type DeepSeekSettings } from "@t3tools/contracts";
+import * as NodeFS from "node:fs";
+import * as NodeOS from "node:os";
+import * as NodePath from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 import type * as EffectAcpSchema from "effect-acp/schema";
 
@@ -8,6 +12,7 @@ import {
 } from "../Layers/DeepSeekProvider.ts";
 import {
   buildDeepSeekAcpSpawnInput,
+  deepSeekAcpSpawnArgs,
   deepSeekModelSlugFromValue,
   resolveDeepSeekConfigUpdates,
   resolveDeepSeekModelConfigValue,
@@ -55,6 +60,7 @@ const settings = (overrides: Partial<DeepSeekSettings>): DeepSeekSettings =>
     enabled: true,
     binaryPath: "dsh",
     profile: "",
+    sharedConfigProfile: "",
     homePath: "",
     launchArgs: "",
     customModels: [],
@@ -80,6 +86,23 @@ describe("DeepSeekAcpSupport", () => {
     expect(custom.command).toBe("/opt/dsh");
     expect(custom.args).toEqual(["work", "--patch", "./o.yml"]);
     expect(custom.env).toMatchObject({ PATH: "/bin", DSH_HOME: "/data/dsh" });
+  });
+
+  it("layers the shared profile's patch when it exists", () => {
+    const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "dsh-home-"));
+    const webDir = NodePath.join(home, "profiles", "web");
+    NodeFS.mkdirSync(webDir, { recursive: true });
+    const patch = NodePath.join(webDir, "cordis.patch.yml");
+    NodeFS.writeFileSync(patch, "[]\n");
+    const shared = settings({ sharedConfigProfile: "web", homePath: home, launchArgs: "--x" });
+    expect(deepSeekAcpSpawnArgs(shared)).toEqual(["acp", "--patch", patch, "--x"]);
+    // Missing patch, disabled, or pointing at the booted profile itself: nothing to layer.
+    expect(deepSeekAcpSpawnArgs({ ...shared, sharedConfigProfile: "other" })).toEqual([
+      "acp",
+      "--x",
+    ]);
+    expect(deepSeekAcpSpawnArgs({ ...shared, sharedConfigProfile: "" })).toEqual(["acp", "--x"]);
+    expect(deepSeekAcpSpawnArgs({ ...shared, profile: "web" })).toEqual(["web", "--x"]);
   });
 
   it("maps dsh's JSON model pair to a plain provider/model slug", () => {

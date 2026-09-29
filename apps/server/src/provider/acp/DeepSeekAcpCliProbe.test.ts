@@ -23,6 +23,7 @@ const settings = {
   enabled: true,
   binaryPath: process.env.T3_DEEPSEEK_BINARY ?? "dsh",
   profile: "",
+  sharedConfigProfile: "web",
   homePath: "",
   launchArgs: "",
   customModels: [],
@@ -74,7 +75,7 @@ describe.runIf(process.env.T3_DEEPSEEK_ACP_PROBE === "1")("DeepSeek ACP CLI prob
       yield* runtime.start();
       yield* applyDeepSeekAcpModelSelection({
         runtime,
-        model: "deepseek-official/deepseek-v4-flash",
+        model: LIVE_MODEL,
         selections: [{ id: "reasoning_effort", value: "off" }],
         mapError: ({ cause }) => cause,
       });
